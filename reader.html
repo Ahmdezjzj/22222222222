@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>قارئ المانجا</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&family=Cairo:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary:#e63946; --primary2:#ff6b6b;
+  --bg:#0a0a0f; --surface:#111118; --card:#16161f;
+  --border:#1e1e2e; --text:#e8e8f0; --text2:#a0a0b8; --muted:#6b6b85;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Tajawal',sans-serif;background:#000;color:var(--text);min-height:100vh;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--primary);border-radius:2px;}
+
+/* TOP BAR */
+.reader-bar {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  height:56px;
+  background:rgba(0,0,0,0.95);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  display:flex; align-items:center; padding:0 16px; gap:12px;
+  transition:transform 0.3s;
+}
+.reader-bar.hidden { transform:translateY(-100%); }
+
+.bar-back {
+  display:flex; align-items:center; gap:6px;
+  color:var(--text2); text-decoration:none; font-size:14px;
+  padding:6px 10px; border-radius:8px; transition:all 0.2s; flex-shrink:0;
+}
+.bar-back:hover { color:var(--text); background:rgba(255,255,255,0.06); }
+
+.bar-title {
+  flex:1; min-width:0;
+  display:flex; flex-direction:column;
+}
+.bar-manga { font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bar-chapter { font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.bar-controls { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+
+.bar-btn {
+  width:36px; height:36px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px; color:var(--text); cursor:pointer; font-size:16px;
+  display:flex; align-items:center; justify-content:center; transition:all 0.2s;
+}
+.bar-btn:hover { background:rgba(255,255,255,0.12); }
+.bar-btn:disabled { opacity:0.3; cursor:not-allowed; }
+.bar-btn.active { background:rgba(230,57,70,0.2); border-color:var(--primary); color:var(--primary); }
+
+.ch-select {
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px; color:var(--text); font-family:'Tajawal',sans-serif;
+  font-size:13px; padding:6px 10px; cursor:pointer; outline:none; max-width:160px;
+}
+
+/* PAGES */
+.reader-pages {
+  min-height:100vh;
+  padding-top:56px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+}
+
+.reader-pages img {
+  width:100%;
+  max-width:900px;
+  display:block;
+  cursor:pointer;
+}
+
+.reader-pages.wide img { max-width:100%; }
+
+/* LOADING */
+.reader-loading {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:100vh; gap:20px;
+}
+.spinner { width:40px; height:40px; border:3px solid rgba(255,255,255,0.1); border-top-color:var(--primary); border-radius:50%; animation:spin 0.7s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg);} }
+
+/* BOTTOM BAR */
+.reader-bottom {
+  position:fixed; bottom:0; left:0; right:0; z-index:100;
+  background:rgba(0,0,0,0.95); backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,0.06);
+  padding:12px 16px;
+  display:flex; flex-direction:column; gap:10px;
+  transition:transform 0.3s;
+}
+.reader-bottom.hidden { transform:translateY(100%); }
+
+.progress-wrap { position:relative; }
+.progress-bar { width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; cursor:pointer; }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--primary2)); border-radius:2px; transition:width 0.1s; pointer-events:none; }
+.progress-text { text-align:center; font-size:12px; color:var(--muted); margin-top:6px; }
+
+.bottom-nav { display:flex; align-items:center; justify-content:space-between; }
+
+.nav-btn {
+  display:flex; align-items:center; gap:6px;
+  padding:10px 20px; border-radius:50px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+  color:var(--text); font-family:'Tajawal',sans-serif; font-size:14px;
+  font-weight:600; cursor:pointer; transition:all 0.2s; text-decoration:none;
+}
+.nav-btn:hover { background:rgba(255,255,255,0.12); }
+.nav-btn:disabled { opacity:0.3; cursor:not-allowed; }
+.nav-btn.primary { background:linear-gradient(135deg,var(--primary),var(--primary2)); border:none; box-shadow:0 4px 16px rgba(230,57,70,0.3); }
+.nav-btn.primary:hover { transform:translateY(-1px); }
+
+.page-indicator { font-size:14px; font-weight:700; color:var(--text2); }
+
+/* SETTINGS PANEL */
+.settings-panel {
+  position:fixed; top:56px; left:0; right:0;
+  background:rgba(10,10,15,0.98); backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:16px; z-index:99;
+  display:none;
+}
+.settings-panel.show { display:block; }
+.settings-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.settings-label { font-size:14px; color:var(--text2); }
+.settings-btns { display:flex; gap:6px; }
+.set-btn {
+  padding:6px 14px; border-radius:6px; border:1px solid var(--border);
+  background:var(--surface); color:var(--muted); cursor:pointer;
+  font-family:'Tajawal',sans-serif; font-size:13px; transition:all 0.2s;
+}
+.set-btn.active { border-color:var(--primary); color:var(--primary); background:rgba(230,57,70,0.1); }
+
+/* END CHAPTER */
+.chapter-end {
+  max-width:500px; margin:40px auto; padding:40px 24px;
+  background:var(--card); border:1px solid var(--border); border-radius:16px;
+  text-align:center;
+}
+.chapter-end-icon { font-size:48px; margin-bottom:16px; }
+.chapter-end h3 { font-family:'Cairo',sans-serif; font-size:20px; font-weight:900; margin-bottom:8px; }
+.chapter-end p { font-size:14px; color:var(--muted); margin-bottom:24px; }
+.chapter-end-btns { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="reader-bar" id="readerBar">
+  <a class="bar-back" id="backBtn" href="/">← رجوع</a>
+  <div class="bar-title">
+    <div class="bar-manga" id="barManga"></div>
+    <div class="bar-chapter" id="barChapter">جاري التحميل...</div>
+  </div>
+  <div class="bar-controls">
+    <select class="ch-select" id="chSelect" onchange="goToChapter(this.value)">
+      <option>الفصول</option>
+    </select>
+    <button class="bar-btn" id="settingsBtn" onclick="toggleSettings()" title="إعدادات">⚙️</button>
+    <button class="bar-btn" id="wideBtn" onclick="toggleWide()" title="وضع عريض">↔️</button>
+  </div>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-row">
+    <span class="settings-label">اتجاه القراءة</span>
+    <div class="settings-btns">
+      <button class="set-btn active" id="modeVertical" onclick="setMode('vertical')">عمودي</button>
+      <button class="set-btn" id="modeHorizontal" onclick="setMode('horizontal')">أفقي</button>
+    </div>
+  </div>
+  <div class="settings-row">
+    <span class="settings-label">حجم الصفحة</span>
+    <div class="settings-btns">
+      <button class="set-btn active" id="sizeNormal" onclick="setSize('normal')">عادي</button>
+      <button class="set-btn" id="sizeWide" onclick="setSize('wide')">عريض</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGES -->
+<div class="reader-pages" id="readerPages">
+  <div class="reader-loading"><div class="spinner"></div><div style="color:var(--muted)">جاري تحميل الفصل...</div></div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="reader-bottom" id="readerBottom">
+  <div class="progress-wrap">
+    <div class="progress-bar" onclick="seekTo(event)">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="progress-text" id="progressText">0 / 0</div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" id="prevChBtn" onclick="prevChapter()">→ الفصل السابق</button>
+    <span class="page-indicator" id="pageIndicator">-</span>
+    <button class="nav-btn primary" id="nextChBtn" onclick="nextChapter()">الفصل التالي ←</button>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const chapterId = params.get('id');
+if (!chapterId) location.href = '/';
+
+let chapterData = null;
+let allChapters = [];
+let currentIdx = 0;
+let readingMode = localStorage.getItem('readMode') || 'vertical';
+let pageSize = localStorage.getItem('pageSize') || 'normal';
+let barsVisible = true;
+let hideTimer = null;
+let loadedImages = 0;
+let totalImages = 0;
+
+// ======== INIT ========
+async function init() {
+  await loadSettings();
+  await loadChapter();
+}
+
+async function loadSettings() {
+  try {
+    const s = await api('/api/settings');
+    if (s.primary_color) document.documentElement.style.setProperty('--primary', s.primary_color);
+  } catch(e) {}
+}
+
+async function loadChapter() {
+  try {
+    chapterData = await api(`/api/chapters/${chapterId}`);
+    document.title = `${chapterData.manga?.title} - الفصل ${chapterData.chapter_number}`;
+
+    document.getElementById('barManga').textContent = chapterData.manga?.title || '';
+    document.getElementById('barChapter').textContent = `الفصل ${chapterData.chapter_number}`;
+    document.getElementById('backBtn').href = `/manga.html?slug=${chapterData.manga?.slug}`;
+
+    // قائمة الفصول
+    allChapters = chapterData.all_chapters || [];
+    currentIdx = allChapters.findIndex(c => c.id == chapterId);
+    const select = document.getElementById('chSelect');
+    select.innerHTML = allChapters.map(c =>
+      `<option value="${c.id}" ${c.id == chapterId ? 'selected' : ''}>الفصل ${c.chapter_number}</option>`
+    ).join('');
+
+    // أزرار التنقل
+    document.getElementById('prevChBtn').disabled = currentIdx >= allChapters.length - 1;
+    document.getElementById('nextChBtn').disabled = currentIdx <= 0;
+
+    renderPages();
+  } catch(e) {
+    document.getElementById('readerPages').innerHTML = `
+      <div class="reader-loading">
+        <div style="font-size:48px">❌</div>
+        <div style="color:var(--muted)">خطأ في تحميل الفصل</div>
+        <a href="/" style="color:var(--primary)">العودة للرئيسية</a>
+      </div>
+    `;
+  }
+}
+
+function renderPages() {
+  const images = chapterData.images || [];
+  totalImages = images.length;
+  loadedImages = 0;
+
+  if (!images.length) {
+    document.getElementById('readerPages').innerHTML = `
+      <div class="reader-loading">
+        <div style="font-size:48px">🖼️</div>
+        <div style="color:var(--muted)">لا توجد صور في هذا الفصل</div>
+      </div>
+    `;
+    return;
+  }
+
+  applyReadingMode();
+
+  const pages = document.getElementById('readerPages');
+  pages.innerHTML = images.map((url, i) => `
+    <img
+      src="${url}"
+      alt="صفحة ${i+1}"
+      loading="${i < 3 ? 'eager' : 'lazy'}"
+      onload="imageLoaded()"
+      onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22600%22><rect fill=%22%23111%22 width=%22400%22 height=%22600%22/><text x=%22200%22 y=%22300%22 text-anchor=%22middle%22 fill=%22%23666%22>خطأ في التحميل</text></svg>'"
+      onclick="toggleBars()"
+    >
+  `).join('') + `
+    <div class="chapter-end" id="chapterEnd">
+      <div class="chapter-end-icon">🎉</div>
+      <h3>انتهى الفصل!</h3>
+      <p>الفصل ${chapterData.chapter_number} من ${chapterData.manga?.title}</p>
+      <div class="chapter-end-btns">
+        ${currentIdx > 0
+          ? `<button class="nav-btn primary" onclick="nextChapter()">الفصل التالي ←</button>`
+          : '<span style="color:var(--muted);font-size:13px">هذا آخر فصل متاح</span>'
+        }
+        <a href="/manga.html?slug=${chapterData.manga?.slug}" class="nav-btn">العودة للمانجا</a>
+      </div>
+    </div>
+  `;
+
+  updateProgress();
+  window.addEventListener('scroll', updateProgress);
+}
+
+function imageLoaded() {
+  loadedImages++;
+  updateProgress();
+}
+
+function updateProgress() {
+  const images = document.querySelectorAll('.reader-pages img');
+  if (!images.length) return;
+
+  const scrollY = window.scrollY + window.innerHeight;
+  let currentPage = 0;
+  images.forEach((img, i) => {
+    if (img.offsetTop + img.offsetHeight / 2 < scrollY) currentPage = i + 1;
+  });
+
+  const pct = totalImages > 0 ? (currentPage / totalImages) * 100 : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${currentPage} / ${totalImages}`;
+  document.getElementById('pageIndicator').textContent = `${currentPage} / ${totalImages}`;
+}
+
+function seekTo(e) {
+  const bar = e.currentTarget;
+  const pct = e.offsetX / bar.offsetWidth;
+  const images = document.querySelectorAll('.reader-pages img');
+  const idx = Math.floor(pct * images.length);
+  if (images[idx]) images[idx].scrollIntoView({ behavior: 'smooth' });
+}
+
+// ======== NAVIGATION ========
+function goToChapter(id) {
+  location.href = `/reader.html?id=${id}`;
+}
+
+function nextChapter() {
+  if (currentIdx > 0) {
+    location.href = `/reader.html?id=${allChapters[currentIdx - 1].id}`;
+  }
+}
+
+function prevChapter() {
+  if (currentIdx < allChapters.length - 1) {
+    location.href = `/reader.html?id=${allChapters[currentIdx + 1].id}`;
+  }
+}
+
+// ======== SETTINGS ========
+function toggleSettings() {
+  document.getElementById('settingsPanel').classList.toggle('show');
+  document.getElementById('settingsBtn').classList.toggle('active');
+}
+
+function setMode(mode) {
+  readingMode = mode;
+  localStorage.setItem('readMode', mode);
+  document.getElementById('modeVertical').classList.toggle('active', mode === 'vertical');
+  document.getElementById('modeHorizontal').classList.toggle('active', mode === 'horizontal');
+  applyReadingMode();
+}
+
+function setSize(size) {
+  pageSize = size;
+  localStorage.setItem('pageSize', size);
+  document.getElementById('sizeNormal').classList.toggle('active', size === 'normal');
+  document.getElementById('sizeWide').classList.toggle('active', size === 'wide');
+  document.getElementById('readerPages').classList.toggle('wide', size === 'wide');
+}
+
+function applyReadingMode() {
+  const pages = document.getElementById('readerPages');
+  pages.classList.toggle('wide', pageSize === 'wide');
+
+  // تطبيق الأوضاع المحفوظة
+  document.getElementById('modeVertical').classList.toggle('active', readingMode === 'vertical');
+  document.getElementById('modeHorizontal').classList.toggle('active', readingMode === 'horizontal');
+  document.getElementById('sizeNormal').classList.toggle('active', pageSize === 'normal');
+  document.getElementById('sizeWide').classList.toggle('active', pageSize === 'wide');
+}
+
+function toggleWide() {
+  setSize(pageSize === 'wide' ? 'normal' : 'wide');
+  document.getElementById('wideBtn').classList.toggle('active', pageSize === 'wide');
+}
+
+// ======== BARS ========
+function toggleBars() {
+  barsVisible = !barsVisible;
+  document.getElementById('readerBar').classList.toggle('hidden', !barsVisible);
+  document.getElementById('readerBottom').classList.toggle('hidden', !barsVisible);
+  if (document.getElementById('settingsPanel').classList.contains('show') && !barsVisible) {
+    document.getElementById('settingsPanel').classList.remove('show');
+  }
+}
+
+// ======== KEYBOARD ========
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') window.scrollBy({ top: 300, behavior: 'smooth' });
+  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') window.scrollBy({ top: -300, behavior: 'smooth' });
+  if (e.key === 'n') nextChapter();
+  if (e.key === 'p') prevChapter();
+  if (e.key === 'Escape') {
+    if (document.getElementById('settingsPanel').classList.contains('show')) {
+      document.getElementById('settingsPanel').classList.remove('show');
+    } else {
+      location.href = `/manga.html?slug=${chapterData?.manga?.slug}`;
+    }
+  }
+});
+
+async function api(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+init();
+</script>
+</body>
+</html>

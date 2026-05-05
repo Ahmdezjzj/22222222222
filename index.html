@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مانجا كلاود</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #e63946;
+  --primary2: #ff6b6b;
+  --bg: #0a0a0f;
+  --bg2: #0d0d14;
+  --surface: #111118;
+  --card: #16161f;
+  --card2: #1a1a25;
+  --border: #1e1e2e;
+  --border2: #252535;
+  --text: #e8e8f0;
+  --text2: #a0a0b8;
+  --muted: #6b6b85;
+  --green: #22c55e;
+  --blue: #3b82f6;
+  --gold: #f59e0b;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Tajawal', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 3px; }
+
+/* ===== NAVBAR ===== */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  height: 64px;
+  background: rgba(10,10,15,0.92);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.nav-logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+
+.nav-logo-text {
+  font-family: 'Cairo', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #fff 30%, var(--primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.nav-search {
+  flex: 1;
+  max-width: 420px;
+  position: relative;
+}
+
+.nav-search input {
+  width: 100%;
+  padding: 9px 40px 9px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 50px;
+  color: var(--text);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.nav-search input:focus {
+  border-color: var(--primary);
+  background: var(--card);
+  box-shadow: 0 0 0 3px rgba(230,57,70,0.1);
+}
+
+.nav-search input::placeholder { color: var(--muted); }
+
+.nav-search-icon {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.nav-links a {
+  color: var(--text2);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.nav-links a:hover, .nav-links a.active {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.nav-links a.active { color: var(--primary); }
+
+/* ===== HERO SLIDER ===== */
+.hero {
+  margin-top: 64px;
+  position: relative;
+  height: 480px;
+  overflow: hidden;
+}
+
+.hero-slides {
+  display: flex;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-slide {
+  min-width: 100%;
+  height: 100%;
+  position: relative;
+  cursor: pointer;
+}
+
+.hero-slide-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center top;
+  filter: brightness(0.4);
+  transition: transform 6s ease;
+}
+
+.hero-slide:hover .hero-slide-bg { transform: scale(1.03); }
+
+.hero-slide-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(10,10,15,0.98) 0%,
+    rgba(10,10,15,0.7) 40%,
+    transparent 70%
+  );
+}
+
+.hero-slide-content {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 55%;
+  padding: 40px 40px 40px 20px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.badge-new { background: linear-gradient(135deg, #56ccf2, #2f80ed); color: #fff; }
+.badge-hot { background: linear-gradient(135deg, #ff912b, #ffb800); color: #000; }
+.badge-ongoing { background: rgba(34,197,94,0.2); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+
+.hero-title {
+  font-family: 'Cairo', sans-serif;
+  font-size: clamp(22px, 3.5vw, 38px);
+  font-weight: 900;
+  line-height: 1.2;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.8);
+}
+
+.hero-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.hero-genre {
+  padding: 3px 10px;
+  border-radius: 50px;
+  font-size: 12px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(4px);
+}
+
+.hero-desc {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 24px;
+  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(230,57,70,0.4);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(230,57,70,0.5);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.btn-secondary:hover { background: rgba(255,255,255,0.14); }
+
+/* Hero dots */
+.hero-dots {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.hero-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.hero-dot.active {
+  width: 24px;
+  border-radius: 3px;
+  background: var(--primary);
+}
+
+/* ===== MAIN CONTENT ===== */
+.main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+/* ===== SECTION ===== */
+.section { margin-bottom: 40px; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Cairo', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.section-title-bar {
+  width: 4px;
+  height: 22px;
+  background: linear-gradient(to bottom, var(--primary), var(--primary2));
+  border-radius: 2px;
+}
+
+.section-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border: 1px solid rgba(230,57,70,0.3);
+  border-radius: 50px;
+  transition: all 0.2s;
+}
+
+.section-link:hover {
+  background: rgba(230,57,70,0.1);
+}
+
+/* ===== MANGA GRID ===== */
+.manga-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 480px) {
+  .manga-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+}
+
+.manga-card {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  group: true;
+}
+
+.manga-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--primary);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(230,57,70,0.3);
+}
+
+.manga-cover-wrap {
+  position: relative;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+}
+
+.manga-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s;
+}
+
+.manga-card:hover .manga-cover { transform: scale(1.06); }
+
+.manga-cover-ph {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--surface), var(--border));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+}
+
+.manga-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.manga-badge-hot { background: linear-gradient(135deg, #ff912b, #ffb800); color: #000; }
+.manga-badge-new { background: linear-gradient(135deg, #56ccf2, #2f80ed); color: #fff; }
+
+.manga-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.manga-card:hover .manga-overlay { opacity: 1; }
+
+.manga-quick {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  opacity: 0;
+  transition: all 0.3s;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 16px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50px;
+}
+
+.manga-card:hover .manga-quick {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.manga-info {
+  padding: 10px;
+}
+
+.manga-title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.manga-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.manga-ch {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.manga-type {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--surface);
+}
+
+/* ===== LATEST CHAPTERS ===== */
+.latest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.latest-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+  align-items: center;
+}
+
+.latest-item:hover {
+  border-color: var(--primary);
+  background: var(--card2);
+  transform: translateX(-4px);
+}
+
+.latest-cover {
+  width: 48px;
+  height: 68px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.latest-cover-ph {
+  width: 48px;
+  height: 68px;
+  border-radius: 6px;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.latest-info { flex: 1; min-width: 0; }
+
+.latest-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.latest-ch {
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.latest-time {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ===== FILTERS ===== */
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.filter-btn {
+  padding: 7px 16px;
+  border-radius: 50px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text2);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover, .filter-btn.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(230,57,70,0.08);
+}
+
+/* ===== GENRES TABS ===== */
+.genre-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+}
+.genre-tabs::-webkit-scrollbar { display: none; }
+
+/* ===== LOADING ===== */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== EMPTY ===== */
+.empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--muted);
+}
+
+.empty-icon { font-size: 56px; margin-bottom: 16px; }
+.empty h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+
+/* ===== FOOTER ===== */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 20px 24px;
+  text-align: center;
+}
+
+.footer-logo {
+  font-family: 'Cairo', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #fff 30%, var(--primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 16px;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover { color: var(--primary); }
+
+.footer-copy {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ===== MOBILE BOTTOM NAV ===== */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: rgba(13,13,20,0.97);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  justify-content: space-around;
+}
+
+@media (max-width: 768px) {
+  .mobile-nav { display: flex; }
+  body { padding-bottom: 70px; }
+  .nav-links { display: none; }
+  .hero { height: 380px; }
+  .hero-slide-content { width: 100%; padding: 20px; }
+  .hero-slide-overlay {
+    background: linear-gradient(to top, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.5) 60%, transparent 100%);
+  }
+  .hero-title { font-size: 20px; }
+  .latest-grid { grid-template-columns: 1fr; }
+}
+
+.mob-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 0 10px;
+  border: none;
+  background: none;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.mob-nav-item.active { color: var(--primary); }
+.mob-nav-item span:first-child { font-size: 20px; }
+
+/* ===== SEARCH RESULTS ===== */
+#searchResults {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0; left: 0;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+  max-height: 380px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+}
+
+.search-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-decoration: none;
+  color: inherit;
+  align-items: center;
+}
+
+.search-item:hover { background: var(--card2); }
+
+.search-thumb {
+  width: 36px; height: 50px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.search-thumb-ph {
+  width: 36px; height: 50px;
+  border-radius: 4px;
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.search-info-title { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.search-info-meta { font-size: 11px; color: var(--muted); }
+
+/* ===== SCROLL TO TOP ===== */
+#scrollTop {
+  position: fixed;
+  bottom: 90px; left: 20px;
+  width: 40px; height: 40px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(230,57,70,0.4);
+  transition: all 0.2s;
+  z-index: 900;
+}
+
+#scrollTop.show { display: flex; }
+#scrollTop:hover { transform: translateY(-2px); }
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in { animation: fadeIn 0.4s ease forwards; }
+
+.stagger > * {
+  opacity: 0;
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger > *:nth-child(n+7) { animation-delay: 0.35s; }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-icon">⚡</div>
+    <span class="nav-logo-text" id="siteName">مانجا كلاود</span>
+  </a>
+
+  <div class="nav-search">
+    <span class="nav-search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="ابحث عن مانجا أو مانهوا...">
+    <div id="searchResults"></div>
+  </div>
+
+  <nav class="nav-links">
+    <a href="/" class="active">الرئيسية</a>
+    <a href="/browse.html">تصفح</a>
+    <a href="/browse.html?type=manga">مانجا</a>
+    <a href="/browse.html?type=manhwa">مانهوا</a>
+    <a href="/browse.html?type=manhua">مانهوا صينية</a>
+  </nav>
+</nav>
+
+<!-- HERO SLIDER -->
+<div class="hero" id="hero">
+  <div class="hero-slides" id="heroSlides">
+    <div class="hero-slide" style="background: var(--bg2);">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+  <div class="hero-dots" id="heroDots"></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- أحدث الفصول -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-title-bar"></div>
+        🔥 شائع اليوم
+      </div>
+      <a href="/browse.html?sort=views" class="section-link">عرض الكل ←</a>
+    </div>
+    <div class="manga-grid stagger" id="hotGrid">
+      <div class="loading" style="grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- آخر الإضافات -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-title-bar"></div>
+        🆕 آخر التحديثات
+      </div>
+      <a href="/browse.html" class="section-link">عرض الكل ←</a>
+    </div>
+    <div class="latest-grid stagger" id="latestGrid">
+      <div class="loading" style="grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- جميع المانجا -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-title-bar"></div>
+        📚 المكتبة الكاملة
+      </div>
+    </div>
+    <div class="filters" id="genreFilters">
+      <button class="filter-btn active" onclick="setGenre('')">الكل</button>
+      <button class="filter-btn" onclick="setGenre('أكشن')">أكشن</button>
+      <button class="filter-btn" onclick="setGenre('رومانسي')">رومانسي</button>
+      <button class="filter-btn" onclick="setGenre('فانتازيا')">فانتازيا</button>
+      <button class="filter-btn" onclick="setGenre('إثارة')">إثارة</button>
+      <button class="filter-btn" onclick="setGenre('كوميديا')">كوميديا</button>
+      <button class="filter-btn" onclick="setGenre('رعب')">رعب</button>
+      <button class="filter-btn" onclick="setGenre('دراما')">دراما</button>
+      <button class="filter-btn" onclick="setGenre('خيال')">خيال</button>
+    </div>
+    <div class="manga-grid stagger" id="allGrid">
+      <div class="loading" style="grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+    <div id="loadMoreWrap" style="text-align:center;margin-top:24px;display:none;">
+      <button class="btn-secondary" onclick="loadMore()">تحميل المزيد</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo" id="footerLogo">مانجا كلاود</div>
+  <div class="footer-links">
+    <a href="/">الرئيسية</a>
+    <a href="/browse.html">تصفح</a>
+    <a href="/browse.html?type=manhwa">مانهوا</a>
+    <a href="/browse.html?type=manga">مانجا</a>
+  </div>
+  <div class="footer-copy">© 2025 مانجا كلاود · جميع الحقوق محفوظة</div>
+</footer>
+
+<!-- MOBILE NAV -->
+<div class="mobile-nav">
+  <a href="/" class="mob-nav-item active"><span>🏠</span><span>الرئيسية</span></a>
+  <a href="/browse.html" class="mob-nav-item"><span>📚</span><span>تصفح</span></a>
+  <button class="mob-nav-item" onclick="document.getElementById('searchInput').focus()"><span>🔍</span><span>بحث</span></button>
+  <a href="/browse.html?sort=views" class="mob-nav-item"><span>🔥</span><span>شائع</span></a>
+</div>
+
+<!-- SCROLL TOP -->
+<button id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script>
+// ===== STATE =====
+let settings = {};
+let heroManga = [];
+let heroIndex = 0;
+let heroTimer = null;
+let allPage = 1;
+let allGenre = '';
+let allSearch = '';
+let searchTimer = null;
+
+// ===== INIT =====
+async function init() {
+  await loadSettings();
+  await Promise.all([loadHero(), loadHot(), loadLatest(), loadAll()]);
+}
+
+// ===== SETTINGS =====
+async function loadSettings() {
+  try {
+    settings = await api('/api/settings');
+    applySettings();
+  } catch(e) {}
+}
+
+function applySettings() {
+  // الألوان
+  if (settings.primary_color) {
+    document.documentElement.style.setProperty('--primary', settings.primary_color);
+  }
+  if (settings.secondary_color) {
+    document.documentElement.style.setProperty('--primary2', settings.secondary_color);
+  }
+  if (settings.bg_color) {
+    document.documentElement.style.setProperty('--bg', settings.bg_color);
+    document.documentElement.style.setProperty('--bg2', settings.bg_color);
+  }
+  if (settings.card_color) {
+    document.documentElement.style.setProperty('--card', settings.card_color);
+  }
+
+  // الاسم
+  if (settings.site_name) {
+    document.title = settings.site_name;
+    const el = document.getElementById('siteName');
+    if (el) el.textContent = settings.site_name;
+    const fl = document.getElementById('footerLogo');
+    if (fl) fl.textContent = settings.site_name;
+  }
+}
+
+// ===== HERO SLIDER =====
+async function loadHero() {
+  try {
+    const data = await api('/api/manga?sort=updated&limit=8');
+    heroManga = (data.manga || []).filter(m => m.cover);
+    if (!heroManga.length) {
+      document.getElementById('hero').style.display = 'none';
+      return;
+    }
+    renderHero();
+    startHeroTimer();
+  } catch(e) {
+    document.getElementById('hero').style.display = 'none';
+  }
+}
+
+function renderHero() {
+  const slides = document.getElementById('heroSlides');
+  const dots = document.getElementById('heroDots');
+
+  slides.innerHTML = heroManga.map((m, i) => `
+    <div class="hero-slide" onclick="location.href='/manga.html?slug=${m.slug}'">
+      <div class="hero-slide-bg" style="background-image:url('${m.cover}')"></div>
+      <div class="hero-slide-overlay"></div>
+      <div class="hero-slide-content">
+        <div class="hero-badge ${m.is_hot ? 'badge-hot' : m.is_new ? 'badge-new' : 'badge-ongoing'}">
+          ${m.is_hot ? '🔥 رائج' : m.is_new ? '👋 جديد' : '🔄 مستمر'}
+        </div>
+        <div class="hero-title">${m.title}</div>
+        <div class="hero-genres">
+          ${(m.genres || '').split(',').filter(Boolean).slice(0,3).map(g =>
+            `<span class="hero-genre">${g.trim()}</span>`
+          ).join('')}
+        </div>
+        <div class="hero-desc">${m.description || ''}</div>
+        <div class="hero-actions">
+          <a href="/manga.html?slug=${m.slug}" class="btn-primary">📖 اقرأ الآن</a>
+          <a href="/manga.html?slug=${m.slug}" class="btn-secondary">ℹ️ التفاصيل</a>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  dots.innerHTML = heroManga.map((_, i) =>
+    `<div class="hero-dot ${i===0?'active':''}" onclick="goHero(${i})"></div>`
+  ).join('');
+
+  goHero(0);
+}
+
+function goHero(i) {
+  heroIndex = i;
+  document.getElementById('heroSlides').style.transform = `translateX(${i * 100}%)`;
+  document.querySelectorAll('.hero-dot').forEach((d, j) => d.classList.toggle('active', j===i));
+}
+
+function startHeroTimer() {
+  heroTimer = setInterval(() => {
+    goHero((heroIndex + 1) % heroManga.length);
+  }, 5000);
+}
+
+// ===== HOT MANGA =====
+async function loadHot() {
+  try {
+    const data = await api('/api/manga?sort=views&limit=12');
+    renderGrid('hotGrid', data.manga || []);
+  } catch(e) {
+    document.getElementById('hotGrid').innerHTML = '<div class="empty" style="grid-column:1/-1"><p>لا توجد بيانات</p></div>';
+  }
+}
+
+// ===== LATEST CHAPTERS =====
+async function loadLatest() {
+  try {
+    const data = await api('/api/manga/latest-chapters');
+    const chapters = data.chapters || [];
+    const grid = document.getElementById('latestGrid');
+
+    if (!chapters.length) {
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📭</div><h3>لا توجد فصول بعد</h3></div>';
+      return;
+    }
+
+    grid.innerHTML = chapters.map(ch => `
+      <a href="/reader.html?id=${ch.id}" class="latest-item">
+        ${ch.cover
+          ? `<img src="${ch.cover}" class="latest-cover" alt="" loading="lazy">`
+          : `<div class="latest-cover-ph">📖</div>`
+        }
+        <div class="latest-info">
+          <div class="latest-title">${ch.title}</div>
+          <div class="latest-ch">الفصل ${ch.chapter_number}</div>
+          <div class="latest-time">${timeAgo(ch.ch_date)}</div>
+        </div>
+      </a>
+    `).join('');
+  } catch(e) {}
+}
+
+// ===== ALL MANGA =====
+async function loadAll(reset = false) {
+  if (reset) { allPage = 1; }
+  try {
+    const params = new URLSearchParams({ page: allPage, limit: 24, genre: allGenre, search: allSearch, sort: 'updated' });
+    const data = await api(`/api/manga?${params}`);
+    const grid = document.getElementById('allGrid');
+
+    if (allPage === 1) {
+      if (!data.manga?.length) {
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+          <div class="empty-icon">📭</div>
+          <h3>لا توجد مانجا بعد</h3>
+          <p>أضف مانجا من لوحة التحكم</p>
+        </div>`;
+        return;
+      }
+      grid.innerHTML = '';
+    }
+
+    const cards = (data.manga || []).map(m => mangaCard(m)).join('');
+    grid.insertAdjacentHTML('beforeend', cards);
+
+    const total = data.total || 0;
+    const shown = allPage * 24;
+    const wrap = document.getElementById('loadMoreWrap');
+    if (shown < total) {
+      wrap.style.display = 'block';
+    } else {
+      wrap.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+function loadMore() {
+  allPage++;
+  loadAll(false);
+}
+
+function setGenre(genre) {
+  allGenre = genre;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim() === (genre || 'الكل'));
+  });
+  loadAll(true);
+}
+
+// ===== MANGA CARD =====
+function mangaCard(m) {
+  return `
+    <a href="/manga.html?slug=${m.slug}" class="manga-card">
+      <div class="manga-cover-wrap">
+        ${m.cover
+          ? `<img src="${m.cover}" class="manga-cover" alt="${m.title}" loading="lazy">`
+          : `<div class="manga-cover-ph">📖</div>`
+        }
+        ${m.is_hot ? '<div class="manga-badge manga-badge-hot">🔥 رائج</div>' : ''}
+        ${m.is_new && !m.is_hot ? '<div class="manga-badge manga-badge-new">جديد</div>' : ''}
+        <div class="manga-overlay"></div>
+        <div class="manga-quick">📖 اقرأ الآن</div>
+      </div>
+      <div class="manga-info">
+        <div class="manga-title">${m.title}</div>
+        <div class="manga-meta">
+          <span class="manga-ch">📑 ${m.last_chapter || 0}</span>
+          <span class="manga-type">${typeLabel(m.type)}</span>
+        </div>
+      </div>
+    </a>
+  `;
+}
+
+function renderGrid(id, manga) {
+  const grid = document.getElementById(id);
+  if (!manga.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📭</div><h3>لا توجد مانجا</h3></div>`;
+    return;
+  }
+  grid.innerHTML = manga.map(m => mangaCard(m)).join('');
+}
+
+// ===== SEARCH =====
+document.getElementById('searchInput').addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  const q = this.value.trim();
+  if (!q) {
+    document.getElementById('searchResults').style.display = 'none';
+    return;
+  }
+  searchTimer = setTimeout(() => doSearch(q), 350);
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.nav-search')) {
+    document.getElementById('searchResults').style.display = 'none';
+  }
+});
+
+async function doSearch(q) {
+  try {
+    const data = await api(`/api/manga?search=${encodeURIComponent(q)}&limit=8`);
+    const res = document.getElementById('searchResults');
+    const manga = data.manga || [];
+
+    if (!manga.length) {
+      res.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">لا توجد نتائج</div>';
+    } else {
+      res.innerHTML = manga.map(m => `
+        <a href="/manga.html?slug=${m.slug}" class="search-item" onclick="document.getElementById('searchResults').style.display='none'">
+          ${m.cover
+            ? `<img src="${m.cover}" class="search-thumb" alt="">`
+            : `<div class="search-thumb-ph">📖</div>`
+          }
+          <div class="search-info">
+            <div class="search-info-title">${m.title}</div>
+            <div class="search-info-meta">${typeLabel(m.type)} • ${m.chapter_count || 0} فصل</div>
+          </div>
+        </a>
+      `).join('');
+    }
+    res.style.display = 'block';
+  } catch(e) {}
+}
+
+// ===== SCROLL =====
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('scrollTop');
+  btn.classList.toggle('show', window.scrollY > 400);
+});
+
+// ===== HELPERS =====
+async function api(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+function typeLabel(type) {
+  const map = { manga: '🇯🇵 مانجا', manhwa: '🇰🇷 مانهوا', manhua: '🇨🇳 مانهوا صينية' };
+  return map[type] || type || 'مانهوا';
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const h = Math.floor(diff / 3600000);
+  if (h < 1) return 'منذ قليل';
+  if (h < 24) return `منذ ${h} ساعة`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `منذ ${d} يوم`;
+  const mo = Math.floor(d / 30);
+  return `منذ ${mo} شهر`;
+}
+
+init();
+</script>
+</body>
+</html>
