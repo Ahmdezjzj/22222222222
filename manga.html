@@ -304,7 +304,7 @@ async function loadManga() {
 }
 
 function renderHero() {
-  const genres = manga.genres ? manga.genres.split(',').map(g => g.trim()).filter(Boolean) : [];
+  const genres = Array.isArray(manga.genres) ? manga.genres : (manga.genres ? manga.genres.split(',').map(g => g.trim()).filter(Boolean) : []);
   const firstChId = manga.chapters?.[0]?.id;
 
   document.getElementById('mangaHero').innerHTML = `
