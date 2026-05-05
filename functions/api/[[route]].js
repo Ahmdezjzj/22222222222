@@ -419,7 +419,8 @@ export async function onRequest(context) {
 function checkAdmin(request, env) {
   const auth = request.headers.get('Authorization') || '';
   const token = auth.replace('Bearer ', '').trim();
-  return token === (env.ADMIN_TOKEN || 'admin123');
+  const validToken = env?.ADMIN_TOKEN || 'manga2025';
+  return token === validToken;
 }
 
 function json(data, headers = {}, status = 200) {
