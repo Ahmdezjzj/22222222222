@@ -238,8 +238,12 @@ export async function onRequest(context) {
       const vault = await env.DB.prepare('SELECT * FROM kvaults WHERE id=?').bind(vault_id).first();
       if (!vault) return json({ error: 'Vault غير موجود' }, cors, 404);
 
-      const folders = await kvaultFolders(vault.url, vault.api_key, '');
-      return json({ folders }, cors);
+      try {
+        const folders = await kvaultFolders(vault.url, vault.api_key, '');
+        return json({ folders }, cors);
+      } catch(e) {
+        return json({ error: `فشل الاتصال بـ K-Vault: ${e.message}`, folders: [] }, cors, 502);
+      }
     }
 
     // POST /api/admin/kvault/subfolders — فصول داخل مانهوا
@@ -444,41 +448,35 @@ function extractChapterNumber(folderName) {
 }
 
 async function kvaultFolders(vaultUrl, apiKey, prefix) {
-  try {
-    const base = vaultUrl.replace(/\/$/, '');
+  const base = vaultUrl.replace(/\/$/, '');
+  const params = new URLSearchParams({ includeFolders: 'true', limit: '1000' });
+  if (prefix) params.set('folderPath', prefix);
 
-    // جلب كل الملفات مع المجلدات
-    const params = new URLSearchParams({ includeFolders: 'true', limit: '1000' });
-    const res = await fetch(`${base}/api/v1/files?${params}`, {
-      headers: { Authorization: `Bearer ${apiKey}` }
-    });
-    const body = await res.json();
+  const res = await fetch(`${base}/api/v1/files?${params}`, {
+    headers: { Authorization: `Bearer ${apiKey}` }
+  });
 
-    // K-Vault يرجع المجلدات كـ objects مع path أو name
-    const folders = body.folders || [];
+  if (!res.ok) {
+    throw new Error(`K-Vault API error: ${res.status} ${res.statusText}`);
+  }
 
-    if (!prefix) {
-      // جلب المجلدات في المستوى الأول فقط (لا تحتوي /)
-      const result = new Set();
-      folders.forEach(f => {
-        const p = f.path || f.name || '';
-        if (p && !p.includes('/')) result.add(p);
+  const body = await res.json();
+  const folders = body.folders || [];
+
+  if (!prefix) {
+    return folders
+      .filter(f => f.path && !f.path.includes('/'))
+      .map(f => f.path || f.name);
+  } else {
+    return folders
+      .filter(f => {
+        const rel = (f.path || '').replace(prefix + '/', '');
+        return rel && !rel.includes('/');
+      })
+      .map(f => {
+        const parts = (f.path || '').split('/');
+        return parts[parts.length - 1];
       });
-      return [...result];
-    } else {
-      // جلب المجلدات داخل مجلد معين
-      const result = new Set();
-      folders.forEach(f => {
-        const p = f.path || f.name || '';
-        if (p.startsWith(prefix + '/')) {
-          const rel = p.slice(prefix.length + 1);
-          if (rel && !rel.includes('/')) result.add(rel);
-        }
-      });
-      return [...result];
-    }
-  } catch (e) {
-    return [];
   }
 }
 
