@@ -829,13 +829,30 @@ async function importChapter() {
 // ======== IMPORT MANGA ========
 async function loadMangaFoldersList() {
   const vId = document.getElementById('impMVault').value;
-  if (!vId) return;
+  const sel = document.getElementById('impMFolder');
+  if (!vId) {
+    sel.innerHTML = '<option value="">-- اختر مانجا --</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">⏳ جاري التحميل...</option>';
+  sel.disabled = true;
   try {
     const data = await adminApi('/api/admin/kvault/folders', 'POST', { vault_id: parseInt(vId) });
-    const sel = document.getElementById('impMFolder');
-    sel.innerHTML = '<option value="">-- اختر مانجا --</option>' +
-      (data.folders || []).map(f => `<option value="${f}">${f}</option>`).join('');
-  } catch(e) {}
+    const folders = data.folders || [];
+    if (!folders.length) {
+      sel.innerHTML = '<option value="">❌ لا توجد مجلدات في هذا Vault</option>';
+      showAlert('importMangaAlert', '⚠️ لم يتم العثور على مجلدات — تأكد من رابط الـ Vault والـ API Key', 'error');
+    } else {
+      sel.innerHTML = '<option value="">-- اختر مانجا --</option>' +
+        folders.map(f => `<option value="${f}">${f}</option>`).join('');
+      showAlert('importMangaAlert', `✅ تم تحميل ${folders.length} مجلد`, 'success');
+    }
+  } catch(e) {
+    sel.innerHTML = '<option value="">❌ خطأ في الاتصال</option>';
+    showAlert('importMangaAlert', `❌ خطأ في الاتصال بالـ Vault: ${e.message}`, 'error');
+  } finally {
+    sel.disabled = false;
+  }
 }
 
 async function importMangaFull() {
