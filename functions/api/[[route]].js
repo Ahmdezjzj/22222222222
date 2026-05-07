@@ -290,7 +290,7 @@ export async function onRequest(context) {
 
     // POST /api/admin/kvault/import-manga — استيراد مانجا كاملة مع معلومات
     if (path === '/admin/kvault/import-manga' && method === 'POST') {
-      const { vault_id, manga_path, manga_title } = await request.json();
+      const { vault_id, manga_path, manga_title, existing_manga_id } = await request.json();
       const vault = await env.DB.prepare('SELECT * FROM kvaults WHERE id=?').bind(vault_id).first();
       if (!vault) return json({ error: 'Vault غير موجود' }, cors, 404);
 
@@ -300,34 +300,48 @@ export async function onRequest(context) {
       const now = new Date().toISOString();
 
       // إنشاء أو تحديث المانجا
-      const existing = await env.DB.prepare('SELECT id FROM manga WHERE slug=?').bind(slug).first();
       let manga_id;
 
-      if (existing) {
-        manga_id = existing.id;
-        if (info.found) {
-          await env.DB.prepare('UPDATE manga SET description=?,cover=?,genres=?,author=?,type=?,updated_at=? WHERE id=?')
-            .bind(info.description, info.cover, info.genres, info.author, info.type, now, manga_id).run();
+      // إذا تم تحديد مانجا موجودة مباشرة — استخدمها مباشرة
+      if (existing_manga_id) {
+        const directMatch = await env.DB.prepare('SELECT id FROM manga WHERE id=?').bind(existing_manga_id).first();
+        if (directMatch) {
+          manga_id = directMatch.id;
+          if (info.found) {
+            await env.DB.prepare('UPDATE manga SET description=?,cover=?,genres=?,author=?,type=?,updated_at=? WHERE id=?')
+              .bind(info.description, info.cover, info.genres, info.author, info.type, now, manga_id).run();
+          }
         }
-      } else {
-        await env.DB.prepare(`
-          INSERT INTO manga(title,slug,description,cover,genres,status,author,type,is_new,kvault_id,kvault_path,created_at,updated_at)
-          VALUES(?,?,?,?,?,?,?,?,1,?,?,?,?)
-        `).bind(
-          manga_title || manga_path.split('/').pop(),
-          slug,
-          info.description || '',
-          info.cover || '',
-          info.genres || '',
-          'ongoing',
-          info.author || '',
-          info.type || 'manhwa',
-          vault_id,
-          manga_path,
-          now, now
-        ).run();
-        const newManga = await env.DB.prepare('SELECT id FROM manga WHERE slug=?').bind(slug).first();
-        manga_id = newManga.id;
+      }
+
+      if (!manga_id) {
+        const existing = await env.DB.prepare('SELECT id FROM manga WHERE slug=?').bind(slug).first();
+        if (existing) {
+          manga_id = existing.id;
+          if (info.found) {
+            await env.DB.prepare('UPDATE manga SET description=?,cover=?,genres=?,author=?,type=?,updated_at=? WHERE id=?')
+              .bind(info.description, info.cover, info.genres, info.author, info.type, now, manga_id).run();
+          }
+        } else {
+          await env.DB.prepare(`
+            INSERT INTO manga(title,slug,description,cover,genres,status,author,type,is_new,kvault_id,kvault_path,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,?,?,1,?,?,?,?)
+          `).bind(
+            manga_title || manga_path.split('/').pop(),
+            slug,
+            info.description || '',
+            info.cover || '',
+            info.genres || '',
+            'ongoing',
+            info.author || '',
+            info.type || 'manhwa',
+            vault_id,
+            manga_path,
+            now, now
+          ).run();
+          const newManga = await env.DB.prepare('SELECT id FROM manga WHERE slug=?').bind(slug).first();
+          manga_id = newManga.id;
+        }
       }
 
       // جلب الفصول
@@ -449,8 +463,8 @@ function extractChapterNumber(folderName) {
 
 async function kvaultFolders(vaultUrl, apiKey, prefix) {
   const base = vaultUrl.replace(/\/$/, '');
+  // Always fetch ALL files without folderPath filter — K-Vault filter is exact match only
   const params = new URLSearchParams({ limit: '1000' });
-  if (prefix) params.set('folderPath', prefix);
 
   const res = await fetch(`${base}/api/v1/files?${params}`, {
     headers: { Authorization: `Bearer ${apiKey}` }
@@ -461,14 +475,13 @@ async function kvaultFolders(vaultUrl, apiKey, prefix) {
   }
 
   const body = await res.json();
-  // K-Vault API returns files with folderPath — extract unique folders from them
   const files = body.files || [];
 
   if (!prefix) {
-    // Get top-level folders: take the first segment of each file's folderPath
+    // Top-level folders: first segment of folderPath
     const folderSet = new Set();
     for (const f of files) {
-      const fp = f.folderPath || '';
+      const fp = (f.folderPath || '').trim();
       if (fp) {
         const topLevel = fp.split('/')[0];
         if (topLevel) folderSet.add(topLevel);
@@ -476,14 +489,16 @@ async function kvaultFolders(vaultUrl, apiKey, prefix) {
     }
     return [...folderSet].sort();
   } else {
-    // Get sub-folders inside prefix
+    // Sub-folders inside prefix: find files whose folderPath starts with "prefix/"
     const folderSet = new Set();
+    const prefixSlash = prefix + '/';
     for (const f of files) {
-      const fp = f.folderPath || '';
-      const rel = fp.startsWith(prefix + '/') ? fp.slice(prefix.length + 1) : (fp === prefix ? '' : null);
-      if (rel === null || rel === '') continue;
-      const nextSegment = rel.split('/')[0];
-      if (nextSegment) folderSet.add(nextSegment);
+      const fp = (f.folderPath || '').trim();
+      if (fp.startsWith(prefixSlash)) {
+        const rest = fp.slice(prefixSlash.length);
+        const nextSegment = rest.split('/')[0];
+        if (nextSegment) folderSet.add(nextSegment);
+      }
     }
     return [...folderSet].sort();
   }
