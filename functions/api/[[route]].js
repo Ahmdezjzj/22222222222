@@ -446,29 +446,36 @@ function extractChapterNumber(folderName) {
 async function kvaultFolders(vaultUrl, apiKey, prefix) {
   try {
     const base = vaultUrl.replace(/\/$/, '');
-    const params = new URLSearchParams({ includeFolders: 'true', limit: '1000' });
-    if (prefix) params.set('folderPath', prefix);
 
+    // جلب كل الملفات مع المجلدات
+    const params = new URLSearchParams({ includeFolders: 'true', limit: '1000' });
     const res = await fetch(`${base}/api/v1/files?${params}`, {
       headers: { Authorization: `Bearer ${apiKey}` }
     });
     const body = await res.json();
+
+    // K-Vault يرجع المجلدات كـ objects مع path أو name
     const folders = body.folders || [];
 
     if (!prefix) {
-      return folders
-        .filter(f => f.path && !f.path.includes('/'))
-        .map(f => f.path || f.name);
+      // جلب المجلدات في المستوى الأول فقط (لا تحتوي /)
+      const result = new Set();
+      folders.forEach(f => {
+        const p = f.path || f.name || '';
+        if (p && !p.includes('/')) result.add(p);
+      });
+      return [...result];
     } else {
-      return folders
-        .filter(f => {
-          const rel = (f.path || '').replace(prefix + '/', '');
-          return rel && !rel.includes('/');
-        })
-        .map(f => {
-          const parts = (f.path || '').split('/');
-          return parts[parts.length - 1];
-        });
+      // جلب المجلدات داخل مجلد معين
+      const result = new Set();
+      folders.forEach(f => {
+        const p = f.path || f.name || '';
+        if (p.startsWith(prefix + '/')) {
+          const rel = p.slice(prefix.length + 1);
+          if (rel && !rel.includes('/')) result.add(rel);
+        }
+      });
+      return [...result];
     }
   } catch (e) {
     return [];
