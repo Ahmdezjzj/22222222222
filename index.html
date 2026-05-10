@@ -822,6 +822,21 @@ footer {
 .stagger > *:nth-child(5) { animation-delay: 0.25s; }
 .stagger > *:nth-child(6) { animation-delay: 0.3s; }
 .stagger > *:nth-child(n+7) { animation-delay: 0.35s; }
+
+/* ===== الإعلانات ===== */
+.ad-container {
+  width: 100%;
+  margin: 12px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.ad-container img {
+  max-width: 100%;
+  border-radius: 10px;
+  display: block;
+  margin: 0 auto;
+}
 </style>
 </head>
 <body>
@@ -860,6 +875,9 @@ footer {
 
 <!-- MAIN -->
 <div class="main">
+
+  <!-- إعلان أعلى الصفحة -->
+  <div id="ad-home_top" class="ad-container" style="display:none"></div>
 
   <!-- أحدث الفصول -->
   <div class="section">
@@ -954,7 +972,22 @@ let searchTimer = null;
 // ===== INIT =====
 async function init() {
   await loadSettings();
-  await Promise.all([loadHero(), loadHot(), loadLatest(), loadAll()]);
+  await Promise.all([loadHero(), loadHot(), loadLatest(), loadAll(), loadAds()]);
+}
+
+async function loadAds() {
+  try {
+    const data = await api('/api/ads');
+    const ads = data.ads || [];
+    ads.forEach(ad => {
+      const container = document.getElementById(`ad-${ad.position}`);
+      if (!container) return;
+      container.style.display = 'block';
+      container.innerHTML = ad.link
+        ? `<a href="${ad.link}" target="_blank" rel="noopener"><img src="${ad.image}" alt="${ad.title||'إعلان'}" style="width:100%;border-radius:10px;display:block"></a>`
+        : `<img src="${ad.image}" alt="${ad.title||'إعلان'}" style="width:100%;border-radius:10px;display:block">`;
+    });
+  } catch(e) {}
 }
 
 // ===== SETTINGS =====

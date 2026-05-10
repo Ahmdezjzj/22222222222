@@ -148,6 +148,21 @@ body{font-family:'Tajawal',sans-serif;background:#000;color:var(--text);min-heig
 .chapter-end h3 { font-family:'Cairo',sans-serif; font-size:20px; font-weight:900; margin-bottom:8px; }
 .chapter-end p { font-size:14px; color:var(--muted); margin-bottom:24px; }
 .chapter-end-btns { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+
+/* ===== الإعلانات ===== */
+.ad-container {
+  width: 100%;
+  margin: 12px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.ad-container img {
+  max-width: 100%;
+  border-radius: 10px;
+  display: block;
+  margin: 0 auto;
+}
 </style>
 </head>
 <body>
@@ -186,10 +201,16 @@ body{font-family:'Tajawal',sans-serif;background:#000;color:var(--text);min-heig
   </div>
 </div>
 
+<!-- إعلان أعلى القارئ -->
+<div id="ad-reader_top" class="ad-container" style="display:none;padding:8px"></div>
+
 <!-- PAGES -->
 <div class="reader-pages" id="readerPages">
   <div class="reader-loading"><div class="spinner"></div><div style="color:var(--muted)">جاري تحميل الفصل...</div></div>
 </div>
+
+<!-- إعلان أسفل القارئ -->
+<div id="ad-reader_bottom" class="ad-container" style="display:none;padding:8px"></div>
 
 <!-- BOTTOM BAR -->
 <div class="reader-bottom" id="readerBottom">
@@ -224,7 +245,21 @@ let totalImages = 0;
 // ======== INIT ========
 async function init() {
   await loadSettings();
-  await loadChapter();
+  await Promise.all([loadChapter(), loadAds()]);
+}
+
+async function loadAds() {
+  try {
+    const data = await api('/api/ads');
+    (data.ads || []).forEach(ad => {
+      const el = document.getElementById(`ad-${ad.position}`);
+      if (!el) return;
+      el.style.display = 'block';
+      el.innerHTML = ad.link
+        ? `<a href="${ad.link}" target="_blank" rel="noopener"><img src="${ad.image}" alt="${ad.title||'إعلان'}" style="width:100%;border-radius:10px;display:block"></a>`
+        : `<img src="${ad.image}" alt="${ad.title||'إعلان'}" style="width:100%;border-radius:10px;display:block">`;
+    });
+  } catch(e) {}
 }
 
 async function loadSettings() {

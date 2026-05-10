@@ -214,6 +214,21 @@ nav {
 @media(max-width:768px) { .mobile-nav { display:flex; } body { padding-bottom:70px; } }
 .mob-nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--muted); text-decoration:none; font-size:10px; font-weight:600; }
 .mob-nav-item span:first-child { font-size:20px; }
+
+/* ===== الإعلانات ===== */
+.ad-container {
+  width: 100%;
+  margin: 12px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.ad-container img {
+  max-width: 100%;
+  border-radius: 10px;
+  display: block;
+  margin: 0 auto;
+}
 </style>
 </head>
 <body>
@@ -236,6 +251,9 @@ nav {
 
 <div class="content" id="content" style="display:none">
 
+  <!-- إعلان أعلى صفحة المانجا -->
+  <div id="ad-manga_top" class="ad-container" style="display:none"></div>
+
   <div class="section-box">
     <div class="section-box-title">📖 القصة</div>
     <div class="manga-desc collapsed" id="mangaDesc">لا يوجد وصف.</div>
@@ -256,6 +274,9 @@ nav {
     </div>
   </div>
 
+  <!-- إعلان أسفل صفحة المانجا -->
+  <div id="ad-manga_bottom" class="ad-container" style="display:none"></div>
+
 </div>
 
 <div class="mobile-nav">
@@ -274,7 +295,21 @@ let descExpanded = false;
 
 async function init() {
   await loadSettings();
-  await loadManga();
+  await Promise.all([loadManga(), loadAds()]);
+}
+
+async function loadAds() {
+  try {
+    const data = await api('/api/ads');
+    (data.ads || []).forEach(ad => {
+      const el = document.getElementById(`ad-${ad.position}`);
+      if (!el) return;
+      el.style.display = 'block';
+      el.innerHTML = ad.link
+        ? `<a href="${ad.link}" target="_blank" rel="noopener"><img src="${ad.image}" alt="${ad.title||'إعلان'}" style="width:100%;border-radius:10px;display:block"></a>`
+        : `<img src="${ad.image}" alt="${ad.title||'إعلان'}" style="width:100%;border-radius:10px;display:block">`;
+    });
+  } catch(e) {}
 }
 
 async function loadSettings() {
