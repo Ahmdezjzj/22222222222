@@ -417,11 +417,36 @@ export async function onRequest(context) {
       return json({ success: true, report }, cors);
     }
 
-    // POST /api/admin/kvault/fetch-info — جلب معلومات من MangaDex
+    // POST /api/admin/kvault/fetch-info — جلب معلومات من Suwayomi
     if (path === '/admin/kvault/fetch-info' && method === 'POST') {
       const { title } = await request.json();
-      const info = await fetchMangaInfo(title);
+      const settings = await getSettings(env);
+      const info = await fetchMangaInfo(title, settings);
+
+      // رفع الغلاف على K-Vault إذا كان متاحاً
+      if (info.found && info.cover && settings.cover_vault_url && settings.cover_vault_key) {
+        try {
+          const coverUrl = await uploadCoverToVault(info.cover, title, settings);
+          if (coverUrl) info.cover = coverUrl;
+        } catch(e) {}
+      }
+
       return json(info, cors);
+    }
+
+    // POST /api/admin/cover-vault/test — اختبار اتصال K-Vault للأغلفة
+    if (path === '/admin/cover-vault/test' && method === 'POST') {
+      const { url, key } = await request.json();
+      try {
+        const base = url.replace(/\/$/, '');
+        const res = await fetch(`${base}/api/v1/files?limit=1`, {
+          headers: { Authorization: `Bearer ${key}` }
+        });
+        if (res.ok) return json({ ok: true }, cors);
+        return json({ ok: false, error: `HTTP ${res.status}` }, cors);
+      } catch(e) {
+        return json({ ok: false, error: e.message }, cors);
+      }
     }
 
     // ======== ADS API ========
@@ -566,88 +591,107 @@ async function kvaultImages(vaultUrl, apiKey, folderPath) {
   }
 }
 
-async function translateToArabic(text) {
-  if (!text) return '';
+// جلب إعدادات من DB
+async function getSettings(env) {
   try {
-    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ar`);
-    const data = await res.json();
-    return data.responseData?.translatedText || text;
-  } catch {
-    return text;
-  }
+    const { results } = await env.DB.prepare('SELECT key, value FROM settings').all();
+    return Object.fromEntries((results || []).map(r => [r.key, r.value]));
+  } catch { return {}; }
 }
 
-const genreMapAr = {
-  'Action': 'أكشن', 'Adventure': 'مغامرات', 'Comedy': 'كوميديا', 'Drama': 'دراما',
-  'Fantasy': 'فانتازيا', 'Horror': 'رعب', 'Mystery': 'غموض', 'Romance': 'رومانسية',
-  'Sci-Fi': 'خيال علمي', 'Slice of Life': 'شريحة من الحياة', 'Sports': 'رياضة',
-  'Supernatural': 'خارق للطبيعة', 'Thriller': 'إثارة', 'Psychological': 'نفسي',
-  'Martial Arts': 'فنون قتالية', 'Mecha': 'ميكا', 'Music': 'موسيقى',
-  'Historical': 'تاريخي', 'School Life': 'حياة مدرسية', 'Seinen': 'سينن',
-  'Shounen': 'شونن', 'Shoujo': 'شوجو', 'Josei': 'جوسيه', 'Isekai': 'إيسيكاي',
-  'Magic': 'سحر', 'Game': 'ألعاب', 'Harem': 'حريم', 'Ecchi': 'إيتشي',
-  'Demons': 'شياطين', 'Vampires': 'مصاصو دماء', 'Military': 'عسكري',
-  'Police': 'شرطة', 'Space': 'فضاء', 'Cooking': 'طبخ', 'Medical': 'طبي'
-};
+// رفع غلاف على K-Vault
+async function uploadCoverToVault(coverUrl, mangaTitle, settings) {
+  const base = settings.cover_vault_url.replace(/\/$/, '');
+  const apiKey = settings.cover_vault_key;
+  const folder = settings.cover_vault_folder || 'covers';
 
-const typeMapAr = { 'manga': 'مانجا', 'manhwa': 'مانهوا', 'manhua': 'مانهوا صينية' };
+  // تحميل الصورة
+  const imgRes = await fetch(coverUrl, { headers: { 'User-Agent': 'MangaSite/1.0' } });
+  if (!imgRes.ok) return null;
 
-async function fetchMangaInfo(title) {
+  const blob = await imgRes.blob();
+  const ext = blob.type.includes('png') ? 'png' : 'jpg';
+  const fileName = `${mangaTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.${ext}`;
+
+  // رفع على K-Vault
+  const formData = new FormData();
+  formData.append('file', blob, fileName);
+  formData.append('folderPath', folder);
+
+  const uploadRes = await fetch(`${base}/api/v1/upload`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: formData
+  });
+
+  if (!uploadRes.ok) return null;
+  const data = await uploadRes.json();
+  const fileId = data.file?.id || data.id;
+  if (!fileId) return null;
+
+  return `${base}/file/${encodeURIComponent(fileId)}`;
+}
+
+async function fetchMangaInfo(title, settings = {}) {
+  const SUWAYOMI = settings.suwayomi_url || 'https://abdouchdu-j.hf.space';
+  const SOURCE_ID = '2482399499047903203'; // Azora AR
+
   try {
-    const query = encodeURIComponent(title.replace(/-/g, ' '));
-    const res = await fetch(
-      `https://api.mangadex.org/manga?title=${query}&limit=1&includes[]=cover_art&includes[]=author`,
+    // البحث عن المانجا
+    const searchRes = await fetch(
+      `${SUWAYOMI}/api/v1/source/${SOURCE_ID}/search?searchTerm=${encodeURIComponent(title)}&pageNum=1`,
       { headers: { 'User-Agent': 'MangaSite/1.0' } }
     );
-    if (!res.ok) return { found: false, title, description: '', cover: '', genres: '', author: '', type: 'manhwa' };
-    const data = await res.json();
+    if (!searchRes.ok) return { found: false, title, description: '', cover: '', genres: '', author: '', type: 'manhwa' };
 
-    if (!data.data || !data.data.length) {
-      return { found: false, title, description: '', cover: '', genres: '', author: '', type: 'manhwa' };
-    }
+    const searchData = await searchRes.json();
+    const results = searchData.mangaList || [];
+    if (!results.length) return { found: false, title, description: '', cover: '', genres: '', author: '', type: 'manhwa' };
 
-    const manga = data.data[0];
-    const attrs = manga.attributes;
+    // أول نتيجة
+    const manga = results[0];
+    const mangaId = manga.id;
 
-    // الوصف — عربي أولاً ثم إنجليزي مع ترجمة
-    let desc = attrs.description?.ar || '';
-    if (!desc) {
-      const enDesc = attrs.description?.en || '';
-      desc = enDesc ? await translateToArabic(enDesc) : '';
-    }
+    // جلب التفاصيل الكاملة
+    const fullRes = await fetch(`${SUWAYOMI}/api/v1/manga/${mangaId}/full`,
+      { headers: { 'User-Agent': 'MangaSite/1.0' } }
+    );
+    if (!fullRes.ok) return { found: false, title, description: '', cover: '', genres: '', author: '', type: 'manhwa' };
 
-    // الغلاف — مدمج في نفس الطلب
-    const coverRel = manga.relationships?.find(r => r.type === 'cover_art');
-    let cover = '';
-    const coverFileName = coverRel?.attributes?.fileName;
-    if (coverFileName) {
-      cover = `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`;
-    }
+    const full = await fullRes.json();
 
-    // التصنيفات — مع ترجمة للعربية
-    const genres = attrs.tags
-      ?.map(t => {
-        const enName = t.attributes?.name?.en || '';
-        return genreMapAr[enName] || t.attributes?.name?.ar || enName;
-      })
-      .filter(Boolean).slice(0, 6).join('، ') || '';
+    // تنظيف القصة — حذف الأسماء البديلة
+    let description = full.description || '';
+    const altIdx = description.indexOf('\nAlternative Names:');
+    if (altIdx !== -1) description = description.slice(0, altIdx).trim();
 
-    // المؤلف — مدمج في نفس الطلب
-    const authorRel = manga.relationships?.find(r => r.type === 'author');
-    const author = authorRel?.attributes?.name || '';
+    // الغلاف — سيُرفع على K-Vault لاحقاً
+    const cover = `${SUWAYOMI}/api/v1/manga/${mangaId}/thumbnail`;
 
-    // النوع بالعربية
-    const typeKey = { 'ja': 'manga', 'ko': 'manhwa', 'zh': 'manhua' }[attrs.originalLanguage] || 'manhwa';
+    // التصنيفات — حذف غير المفيدة
+    const skipGenres = ['Manhwa', 'Manga', 'Manhua', 'ويبتون', 'اسبوعي', 'شهري'];
+    const genres = (full.genre || [])
+      .filter(g => !skipGenres.includes(g))
+      .slice(0, 6).join('، ');
+
+    // النوع
+    const typeMap = { 'Manhwa': 'manhwa', 'Manga': 'manga', 'Manhua': 'manhua' };
+    const rawGenres = full.genre || [];
+    const typeKey = rawGenres.includes('Manhwa') ? 'manhwa' : rawGenres.includes('Manga') ? 'manga' : rawGenres.includes('Manhua') ? 'manhua' : 'manhwa';
+
+    // الحالة
+    const statusMap = { 'COMPLETED': 'completed', 'ONGOING': 'ongoing' };
+    const status = statusMap[full.status] || 'ongoing';
 
     return {
       found: true,
-      title: attrs.title?.en || title,
-      description: desc,
+      title: full.title || title,
+      description,
       cover,
       genres,
-      author,
+      author: full.author || full.artist || '',
       type: typeKey,
-      type_ar: typeMapAr[typeKey] || 'مانهوا'
+      status,
     };
   } catch (e) {
     return { found: false, title, description: '', cover: '', genres: '', author: '', type: 'manhwa' };
