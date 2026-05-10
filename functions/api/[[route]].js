@@ -117,30 +117,6 @@ export async function onRequest(context) {
       return json({ ...ch, images: JSON.parse(ch.images || '[]'), manga, all_chapters: allChapters }, cors);
     }
 
-    // GET /api/img?vault_id=X&file_id=Y — proxy صور K-Vault
-    if (path === '/img' && method === 'GET') {
-      const params = new URL(request.url).searchParams;
-      const vaultId = params.get('vault_id');
-      const fileId = params.get('file_id');
-      if (!vaultId || !fileId) return new Response('missing params', { status: 400 });
-
-      const vault = await env.DB.prepare('SELECT * FROM kvaults WHERE id=?').bind(vaultId).first();
-      if (!vault) return new Response('vault not found', { status: 404 });
-
-      const base = vault.url.replace(/\/$/, '');
-      const imgRes = await fetch(`${base}/file/${encodeURIComponent(fileId)}`, {
-        headers: { Authorization: `Bearer ${vault.api_key}` }
-      });
-
-      if (!imgRes.ok) return new Response('image error', { status: imgRes.status });
-
-      const headers = new Headers();
-      headers.set('Content-Type', imgRes.headers.get('Content-Type') || 'image/jpeg');
-      headers.set('Cache-Control', 'public, max-age=86400');
-      for (const [k,v] of Object.entries(cors)) headers.set(k, v);
-      return new Response(imgRes.body, { headers });
-    }
-
     // ======== ADMIN API ========
     if (!checkAdmin(request, env)) return json({ error: 'غير مصرح' }, cors, 401);
 
@@ -286,7 +262,7 @@ export async function onRequest(context) {
       const vault = await env.DB.prepare('SELECT * FROM kvaults WHERE id=?').bind(vault_id).first();
       if (!vault) return json({ error: 'Vault غير موجود' }, cors, 404);
 
-      const images = await kvaultImages(vault.url, vault.api_key, folder_path, vault.id);
+      const images = await kvaultImages(vault.url, vault.api_key, folder_path);
       return json({ images, count: images.length }, cors);
     }
 
@@ -296,7 +272,7 @@ export async function onRequest(context) {
       const vault = await env.DB.prepare('SELECT * FROM kvaults WHERE id=?').bind(vault_id).first();
       if (!vault) return json({ error: 'Vault غير موجود' }, cors, 404);
 
-      const images = await kvaultImages(vault.url, vault.api_key, folder_path, vault.id);
+      const images = await kvaultImages(vault.url, vault.api_key, folder_path);
       if (!images.length) return json({ error: 'لا توجد صور في هذا المجلد' }, cors, 400);
 
       const now = new Date().toISOString();
@@ -376,7 +352,7 @@ export async function onRequest(context) {
         const chNum = extractChapterNumber(folder);
         if (!chNum) continue;
 
-        const images = await kvaultImages(vault.url, vault.api_key, `${manga_path}/${folder}`, vault.id);
+        const images = await kvaultImages(vault.url, vault.api_key, `${manga_path}/${folder}`);
         if (!images.length) continue;
 
         const existingCh = await env.DB.prepare('SELECT id FROM chapters WHERE manga_id=? AND chapter_number=?').bind(manga_id, chNum).first();
@@ -421,7 +397,7 @@ export async function onRequest(context) {
             if (!chNum) continue;
             const exists = await env.DB.prepare('SELECT id FROM chapters WHERE manga_id=? AND chapter_number=?').bind(manga.id, chNum).first();
             if (!exists) {
-              const images = await kvaultImages(vault.url, vault.api_key, `${mangaFolder}/${chFolder}`, vault.id);
+              const images = await kvaultImages(vault.url, vault.api_key, `${mangaFolder}/${chFolder}`);
               if (images.length) {
                 const now = new Date().toISOString();
                 await env.DB.prepare('INSERT INTO chapters(manga_id,chapter_number,chapter_name,images,created_at) VALUES(?,?,?,?,?)')
@@ -446,6 +422,45 @@ export async function onRequest(context) {
       const { title } = await request.json();
       const info = await fetchMangaInfo(title);
       return json(info, cors);
+    }
+
+    // ======== ADS API ========
+    // GET /api/ads — جلب الإعلانات النشطة (عام)
+    if (path === '/ads' && method === 'GET') {
+      const { results } = await env.DB.prepare("SELECT * FROM ads WHERE active=1 ORDER BY position ASC").all();
+      return json({ ads: results || [] }, cors);
+    }
+
+    if (!checkAdmin(request, env)) return json({ error: 'غير مصرح' }, cors, 401);
+
+    // GET /api/admin/ads
+    if (path === '/admin/ads' && method === 'GET') {
+      const { results } = await env.DB.prepare('SELECT * FROM ads ORDER BY position ASC').all();
+      return json({ ads: results || [] }, cors);
+    }
+
+    // POST /api/admin/ads
+    if (path === '/admin/ads' && method === 'POST') {
+      const d = await request.json();
+      const now = new Date().toISOString();
+      await env.DB.prepare('INSERT INTO ads(title,image,link,position,active,created_at) VALUES(?,?,?,?,?,?)')
+        .bind(d.title||'', d.image||'', d.link||'', d.position||'home_top', d.active?1:0, now).run();
+      return json({ success: true }, cors);
+    }
+
+    // PUT /api/admin/ads/:id
+    const adMatch = path.match(/^\/admin\/ads\/(\d+)$/);
+    if (adMatch && method === 'PUT') {
+      const d = await request.json();
+      await env.DB.prepare('UPDATE ads SET title=?,image=?,link=?,position=?,active=? WHERE id=?')
+        .bind(d.title||'', d.image||'', d.link||'', d.position||'home_top', d.active?1:0, adMatch[1]).run();
+      return json({ success: true }, cors);
+    }
+
+    // DELETE /api/admin/ads/:id
+    if (adMatch && method === 'DELETE') {
+      await env.DB.prepare('DELETE FROM ads WHERE id=?').bind(adMatch[1]).run();
+      return json({ success: true }, cors);
     }
 
     return json({ error: 'المسار غير موجود' }, cors, 404);
@@ -528,7 +543,7 @@ async function kvaultFolders(vaultUrl, apiKey, prefix) {
   }
 }
 
-async function kvaultImages(vaultUrl, apiKey, folderPath, vaultId = null) {
+async function kvaultImages(vaultUrl, apiKey, folderPath) {
   try {
     const base = vaultUrl.replace(/\/$/, '');
     const params = new URLSearchParams({
@@ -545,19 +560,42 @@ async function kvaultImages(vaultUrl, apiKey, folderPath, vaultId = null) {
 
     return files
       .filter(f => f.id && /\.(jpg|jpeg|png|webp|gif)$/i.test(f.name || ''))
-      .map(f => vaultId
-        ? `/api/img?vault_id=${vaultId}&file_id=${encodeURIComponent(f.id)}`
-        : `${base}/file/${encodeURIComponent(f.id)}`
-      );
+      .map(f => `${base}/file/${encodeURIComponent(f.id)}`);
   } catch (e) {
     return [];
   }
 }
 
+async function translateToArabic(text) {
+  if (!text) return '';
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ar`);
+    const data = await res.json();
+    return data.responseData?.translatedText || text;
+  } catch {
+    return text;
+  }
+}
+
+const genreMapAr = {
+  'Action': 'أكشن', 'Adventure': 'مغامرات', 'Comedy': 'كوميديا', 'Drama': 'دراما',
+  'Fantasy': 'فانتازيا', 'Horror': 'رعب', 'Mystery': 'غموض', 'Romance': 'رومانسية',
+  'Sci-Fi': 'خيال علمي', 'Slice of Life': 'شريحة من الحياة', 'Sports': 'رياضة',
+  'Supernatural': 'خارق للطبيعة', 'Thriller': 'إثارة', 'Psychological': 'نفسي',
+  'Martial Arts': 'فنون قتالية', 'Mecha': 'ميكا', 'Music': 'موسيقى',
+  'Historical': 'تاريخي', 'School Life': 'حياة مدرسية', 'Seinen': 'سينن',
+  'Shounen': 'شونن', 'Shoujo': 'شوجو', 'Josei': 'جوسيه', 'Isekai': 'إيسيكاي',
+  'Magic': 'سحر', 'Game': 'ألعاب', 'Harem': 'حريم', 'Ecchi': 'إيتشي',
+  'Demons': 'شياطين', 'Vampires': 'مصاصو دماء', 'Military': 'عسكري',
+  'Police': 'شرطة', 'Space': 'فضاء', 'Cooking': 'طبخ', 'Medical': 'طبي'
+};
+
+const typeMapAr = { 'manga': 'مانجا', 'manhwa': 'مانهوا', 'manhua': 'مانهوا صينية' };
+
 async function fetchMangaInfo(title) {
   try {
     const query = encodeURIComponent(title.replace(/-/g, ' '));
-    const res = await fetch(`https://api.mangadex.org/manga?title=${query}&limit=1&availableTranslatedLanguage[]=ar&availableTranslatedLanguage[]=en`);
+    const res = await fetch(`https://api.mangadex.org/manga?title=${query}&limit=1`);
     const data = await res.json();
 
     if (!data.data || !data.data.length) {
@@ -567,23 +605,30 @@ async function fetchMangaInfo(title) {
     const manga = data.data[0];
     const attrs = manga.attributes;
 
-    // الوصف
-    const desc = attrs.description?.ar || attrs.description?.en || '';
+    // الوصف — عربي أولاً ثم إنجليزي مع ترجمة
+    let desc = attrs.description?.ar || '';
+    if (!desc) {
+      const enDesc = attrs.description?.en || '';
+      desc = enDesc ? await translateToArabic(enDesc) : '';
+    }
 
     // الغلاف
-    const coverId = manga.relationships?.find(r => r.type === 'cover_art')?.id;
+    const coverRel = manga.relationships?.find(r => r.type === 'cover_art');
     let cover = '';
-    if (coverId) {
-      const coverRes = await fetch(`https://api.mangadex.org/cover/${coverId}`);
+    if (coverRel?.id) {
+      const coverRes = await fetch(`https://api.mangadex.org/cover/${coverRel.id}`);
       const coverData = await coverRes.json();
       const fileName = coverData.data?.attributes?.fileName;
       if (fileName) cover = `https://uploads.mangadex.org/covers/${manga.id}/${fileName}`;
     }
 
-    // التصنيفات
+    // التصنيفات — مع ترجمة للعربية
     const genres = attrs.tags
-      ?.map(t => t.attributes?.name?.ar || t.attributes?.name?.en)
-      .filter(Boolean).slice(0, 6).join(', ') || '';
+      ?.map(t => {
+        const enName = t.attributes?.name?.en || '';
+        return genreMapAr[enName] || t.attributes?.name?.ar || enName;
+      })
+      .filter(Boolean).slice(0, 6).join('، ') || '';
 
     // المؤلف
     const authorId = manga.relationships?.find(r => r.type === 'author')?.id;
@@ -594,11 +639,19 @@ async function fetchMangaInfo(title) {
       author = authData.data?.attributes?.name || '';
     }
 
-    // النوع
-    const typeMap = { 'ja': 'manga', 'ko': 'manhwa', 'zh': 'manhua' };
-    const type = typeMap[attrs.originalLanguage] || 'manhwa';
+    // النوع بالعربية
+    const typeKey = { 'ja': 'manga', 'ko': 'manhwa', 'zh': 'manhua' }[attrs.originalLanguage] || 'manhwa';
 
-    return { found: true, title: attrs.title?.en || title, description: desc, cover, genres, author, type };
+    return {
+      found: true,
+      title: attrs.title?.en || title,
+      description: desc,
+      cover,
+      genres,
+      author,
+      type: typeKey,
+      type_ar: typeMapAr[typeKey] || 'مانهوا'
+    };
   } catch (e) {
     return { found: false, title, description: '', cover: '', genres: '', author: '', type: 'manhwa' };
   }
