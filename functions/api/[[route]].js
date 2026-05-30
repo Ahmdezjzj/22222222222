@@ -584,8 +584,8 @@ async function kvaultImages(vaultUrl, apiKey, folderPath) {
     const files = body.files || [];
 
     return files
-      .filter(f => f.id && /\.(jpg|jpeg|png|webp|gif)$/i.test(f.name || ''))
-      .map(f => `${base}/file/${encodeURIComponent(f.id)}`);
+      .filter(f => f.name && /\.(jpg|jpeg|png|webp|gif)$/i.test(f.name || ''))
+      .map(f => `${base}/file/${encodeURIComponent(f.name).replace(/%3A/gi, ':')}`);
   } catch (e) {
     return [];
   }
