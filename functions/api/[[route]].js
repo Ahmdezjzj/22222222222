@@ -585,7 +585,7 @@ async function kvaultImages(vaultUrl, apiKey, folderPath) {
 
     return files
       .filter(f => f.id && /\.(jpg|jpeg|png|webp|gif)$/i.test(f.name || ''))
-      .map(f => `${base}/file/${encodeURIComponent(f.id)}`);
+      .map(f => `${base}/file/${encodeURIComponent(f.id).replace(/%3A/gi, ':')}`);
   } catch (e) {
     return [];
   }
@@ -629,7 +629,7 @@ async function uploadCoverToVault(coverUrl, mangaTitle, settings) {
   const fileId = data.file?.id || data.id;
   if (!fileId) return null;
 
-  return `${base}/file/${encodeURIComponent(fileId)}`;
+  return `${base}/file/${encodeURIComponent(fileId).replace(/%3A/gi, ':')}`;
 }
 
 async function fetchMangaInfo(title, settings = {}) {
